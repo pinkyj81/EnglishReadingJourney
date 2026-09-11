@@ -1,0 +1,26 @@
+<nav class="bottom-nav">
+    <a href="/" class="nav-item {% if request.path == '/' %}active{% endif %}">
+        <i class="bi bi-house-fill nav-icon"></i>
+        <span class="nav-label">홈</span>
+    </a>
+    <a href="/bookshelf" class="nav-item {% if request.path == '/bookshelf' %}active{% endif %}">
+        <i class="bi bi-book nav-icon"></i>
+        <span class="nav-label">내 책장</span>
+    </a>
+    <a href="/points" class="nav-item {% if request.path == '/points' %}active{% endif %}">
+        <i class="bi bi-trophy nav-icon"></i>
+        <span class="nav-label">포인트</span>
+    </a>
+    <a href="#" class="nav-item">
+        <i class="bi bi-type nav-icon"></i>
+        <span class="nav-label">단어장</span>
+    </a>
+    <a href="#" class="nav-item">
+        <i class="bi bi-pencil-fill nav-icon"></i>
+        <span class="nav-label">라이팅</span>
+    </a>
+    <a href="#" class="nav-item">
+        <i class="bi bi-graph-up nav-icon"></i>
+        <span class="nav-label">진행도</span>
+    </a>
+</nav>

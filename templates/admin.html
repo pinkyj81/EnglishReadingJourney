@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ko-KR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>플랜 관리 - English Reading Journey</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=20260909-14">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}?v=20260909-04">
+</head>
+<body class="admin-page">
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <i class="bi bi-book logo-icon"></i>
+                <h1>플랜 관리</h1>
+            </div>
+            <div class="header-actions">
+                <button type="button" class="btn-icon" onclick="startNewPlanRegistration()" title="새 플랜 추가">
+                    <i class="bi bi-plus-lg"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        {% if error %}
+            <div class="alert alert-error">
+                {{ error }}
+            </div>
+        {% endif %}
+
+        <!-- 플랜 목록 -->
+        <div class="card plans-list-section">
+            <div class="section-header">
+                <i class="bi bi-list-check list-icon"></i>
+                <span class="section-label">저장된 플랜</span>
+                <span class="badge">{{ plans|length }}</span>
+            </div>
+
+            {% if plans %}
+                <div class="plans-grid">
+                    {% for plan in plans %}
+                        <div class="plan-card" data-plan-id="{{ plan.plan_id }}">
+                            {% if plan.book_cover_url %}
+                                <div class="plan-cover">
+                                    <img src="{{ plan.book_cover_url }}" alt="책 커버" class="plan-cover-image">
+                                </div>
+                            {% endif %}
+                            <div class="plan-header">
+                                <h3 class="plan-title">
+                                    {{ plan.book_title }}
+                                    {% if plan.start_chapter is not none and plan.end_chapter is not none %}
+                                        ({{ plan.start_chapter }} ~ {{ plan.end_chapter }})
+                                    {% endif %}
+                                </h3>
+                                <div class="plan-header-actions">
+                                    <button class="btn-delete" onclick="deletePlan({{ plan.plan_id }})"><i class="bi bi-trash-fill"></i></button>
+                                </div>
+                            </div>
+                            
+                            <div class="plan-body">
+                                <p class="plan-author">
+                                    <span class="label">저자:</span>
+                                    {{ plan.author }}
+                                </p>
+                                
+                                <p class="plan-dates">
+                                    <span class="label"><i class="bi bi-calendar"></i> 기간:</span>
+                                    {{ plan.week_start | strftime('%Y/%m/%d') }} ~ {{ plan.week_end | strftime('%Y/%m/%d') }}
+                                </p>
+                                
+                                <div class="plan-progress">
+                                    <div class="progress-info">
+                                        <span class="label"><i class="bi bi-graph-up"></i> 진행도:</span>
+                                        <span class="progress-text">{{ plan.current_progress }} / {{ plan.total_chapters }}</span>
+                                    </div>
+                                    <div class="progress-bar-container">
+                                        <div class="progress-bar" style="width: {{ (plan.current_progress / plan.total_chapters * 100) if plan.total_chapters > 0 else 0 }}%"></div>
+                                    </div>
+                                </div>
+
+                                <p class="plan-created">
+                                    생성일: {{ plan.created_date | strftime('%Y/%m/%d') }}
+                                </p>
+                            </div>
+
+                            <div class="plan-actions">
+                                <button class="btn btn-small btn-primary" onclick="viewPlan({{ plan.plan_id }})">보기</button>
+                                <button class="btn btn-small btn-secondary" onclick="editPlan({{ plan.plan_id }})">수정</button>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="bi bi-inbox"></i></div>
+                    <p>저장된 플랜이 없습니다. 위에서 새 플랜을 추가해주세요.</p>
+                </div>
+            {% endif %}
+        </div>
+    </main>
+
+    {% include 'partials/bottom_nav.html' %}
+
+    <div id="planModal" class="modal">
+        <div class="modal-content modal-wide">
+            <div class="modal-header">
+                <h3 id="planModalTitle">새 플랜 추가</h3>
+                <button type="button" class="btn-close" onclick="closePlanModal()">×</button>
+            </div>
+
+            <div class="plan-modal-body">
+                <form id="planForm" class="plan-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="book_title">책 제목 *</label>
+                            <input type="text" id="book_title" name="book_title" list="bookshelfTitleOptions" placeholder="예: The Hate U Give" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="author">저자 *</label>
+                            <input type="text" id="author" name="author" list="bookshelfAuthorOptions" placeholder="예: Angie Thomas" required>
+                        </div>
+                    </div>
+
+                    <datalist id="bookshelfTitleOptions"></datalist>
+                    <datalist id="bookshelfAuthorOptions"></datalist>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="week_start">주간 시작일 *</label>
+                            <input type="text" id="week_start" name="week_start" placeholder="YYYY/MM/DD" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="week_end">주간 종료일 *</label>
+                            <input type="text" id="week_end" name="week_end" placeholder="YYYY/MM/DD" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label for="book_cover_url">책 커버 이미지 URL (선택)</label>
+                            <input type="url" id="book_cover_url" name="book_cover_url" placeholder="https://cdn.example.com/book-cover.jpg">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="total_chapters">챕터 수 *</label>
+                            <input type="number" id="total_chapters" name="total_chapters" min="1" placeholder="5" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="start_chapter">시작 챕터 번호</label>
+                            <input type="number" id="start_chapter" name="start_chapter" min="1" placeholder="1" value="1">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                            <button type="submit" class="btn btn-primary">플랜 추가</button>
+                        </div>
+                    </div>
+                </form>
+
+                <div id="chaptersContainer" style="display: none; margin-top: 20px;">
+                    <h4><i class="bi bi-book-half"></i> 챕터 정보 입력</h4>
+                    <p class="hint-text">각 챕터의 번호와 페이지 범위를 입력하세요.</p>
+
+                    <div id="chaptersList"></div>
+
+                    <button type="button" class="btn btn-secondary" onclick="addChapterInput(); setupChapterNumberAutoUpdate();">
+                        <span>+ 챕터 추가</span>
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="submitChapters()">
+                        챕터 저장
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="openVocabTsvBtn" style="margin-top: 12px; display: none;">
+                        보카 등록
+                    </button>
+                </div>
+
+                <div id="vocabularyTsvContainer" class="vocabulary-tsv-container" style="display: none; margin-top: 24px;">
+                    <h4><i class="bi bi-type"></i> 챕터별 보카 TSV 등록</h4>
+                    <p class="hint-text">예시 형식: <strong>word    품사    뜻    예문</strong> 또는 <strong>word    뜻</strong></p>
+
+                    <div class="chapter-select-wrap">
+                        <label for="vocabChapterSelect">저장할 챕터</label>
+                        <select id="vocabChapterSelect">
+                            <option value="">챕터를 선택하세요</option>
+                        </select>
+                    </div>
+
+                    <textarea id="vocabTsvInput" rows="8" placeholder="fang	명사	송곳니	A sharp tooth in a snake.
+vampire	명사	흡혈귀	A vampire is a creature..."></textarea>
+
+                    <div class="tsv-actions">
+                        <button type="button" class="btn btn-secondary" id="parseVocabTsvBtn">파싱하기</button>
+                        <button type="button" class="btn btn-primary" id="saveVocabTsvBtn" disabled>저장하기</button>
+                    </div>
+
+                    <div id="vocabPreview" class="vocab-preview"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="vocabModal" class="modal">
+        <div class="modal-content modal-wide">
+            <div class="modal-header">
+                <h3>보카 TSV 등록</h3>
+                <button type="button" class="btn-close" onclick="closeVocabModal()">×</button>
+            </div>
+
+            <div class="vocab-modal-body">
+                <div class="chapter-select-wrap">
+                    <label>저장할 챕터</label>
+                    <div class="chapter-display">
+                        <span id="modalChapterNumber" class="chapter-badge">-</span>
+                    </div>
+                </div>
+
+                <textarea id="modalVocabTsvInput" rows="10" placeholder="word	품사	뜻	example
+ancient	형용사	아주 오래된	The ancient castle is beautiful."></textarea>
+
+                <div class="tsv-actions">
+                    <button type="button" class="btn btn-secondary" id="modalParseVocabTsvBtn">파싱하기</button>
+                </div>
+
+                <div id="modalVocabPreview" class="vocab-preview"></div>
+
+                <div class="tsv-save-actions">
+                    <button type="button" class="btn btn-primary" id="modalSaveVocabTsvBtn" disabled>저장하기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Modal -->
+    <div id="alertModal" class="modal">
+        <div class="modal-content">
+            <p id="alertMessage"></p>
+            <button class="btn btn-primary" onclick="closeAlert()">확인</button>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/admin.js') }}?v=20260909-04"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+        // flatpickr를 사용하여 날짜 입력 형식을 YYYY/MM/DD로 설정
+        flatpickr('#week_start', {
+            dateFormat: 'Y/m/d',
+            altInput: false
+        });
+        flatpickr('#week_end', {
+            dateFormat: 'Y/m/d',
+            altInput: false
+        });
+    </script>
+</body>
+</html>

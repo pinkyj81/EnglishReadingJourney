@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ko-KR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Reading Journey - 영어독서 관리</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=20260909-14">
+</head>
+<body class="index-page">
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <i class="bi bi-book logo-icon"></i>
+                <h1>My Reading Journey</h1>
+            </div>
+            <div class="header-actions">
+                <a href="/admin" class="btn-header-action" title="플랜 관리">
+                    <i class="bi bi-plus-lg"></i>
+                    플랜추가
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        {% if error %}
+            <div class="alert alert-error">
+                {{ error }}
+            </div>
+        {% endif %}
+
+        <!-- 주간 목표 섹션 -->
+        <div class="card weekly-goal">
+            <div class="weekly-goal-header">
+                <a href="/?week_offset={{ week_offset - 1 }}" class="btn-nav btn-nav-prev" title="이전주">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+                <div class="week-info">
+                    <i class="bi bi-calendar calendar-icon"></i>
+                    <span class="week-dates">
+                        {{ nav_week_start }} ~ {{ nav_week_end }}
+                    </span>
+                </div>
+                <a href="/?week_offset={{ week_offset + 1 }}" class="btn-nav btn-nav-next" title="다음주">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+
+        {% if plan %}
+            <!-- 책 정보 섹션 -->
+            <div class="card book-info">
+                <div class="book-header">
+                    <i class="bi bi-bookmark-fill bookmark-icon"></i>
+                    <span class="section-label">이번주 책</span>
+                </div>
+                
+                <div class="book-content">
+                    <div class="book-cover">
+                        {% if plan.book_cover_url %}
+                            <img src="{{ plan.book_cover_url }}" alt="책 커버" class="book-cover-image">
+                        {% else %}
+                            <div class="cover-placeholder"><i class="bi bi-book-half"></i></div>
+                        {% endif %}
+                    </div>
+                    <div class="book-details">
+                        <h2 class="book-title">{{ plan.book_title }}</h2>
+                        <p class="book-author">{{ plan.author }}</p>
+
+                        <div class="book-meta-list">
+                            {% if plan.atos is not none and plan.atos != '' %}
+                                <div class="book-meta-row">
+                                    <span class="book-meta-label">AR (ATOS)</span>
+                                    <span class="book-meta-value">{{ plan.atos }}</span>
+                                </div>
+                            {% endif %}
+                            {% if plan.ar_point is not none and plan.ar_point != '' %}
+                                <div class="book-meta-row">
+                                    <span class="book-meta-label">AR Point</span>
+                                    <span class="book-meta-value">{{ plan.ar_point }}</span>
+                                </div>
+                            {% endif %}
+                            {% if plan.lexile is not none and plan.lexile != '' %}
+                                <div class="book-meta-row">
+                                    <span class="book-meta-label">Lexile</span>
+                                    <span class="book-meta-value">{{ plan.lexile }}</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 읽어야 할 챕터 섹션 -->
+            <div class="card chapters-section">
+                <div class="section-header">
+                    <i class="bi bi-list-check list-icon"></i>
+                    <span class="section-label">이번주 읽어야 할 챕터</span>
+                </div>
+
+                <div class="chapters-list">
+                    {% for chapter in chapters %}
+                        <div class="chapter-item {% if chapter.completed %}completed{% endif %} {% if selected_chapter_id == chapter.chapter_id %}active{% endif %}" 
+                             data-chapter-id="{{ chapter.chapter_id }}">
+                            <div class="chapter-number-badge">{{ loop.index }}</div>
+                            <div class="chapter-info">
+                                <span class="chapter-title">Chapter {{ chapter.chapter_number }}</span>
+                                <span class="chapter-pages">p. {{ chapter.page_start }} - {{ chapter.page_end }}</span>
+                            </div>
+                            <div class="chapter-actions">
+                                <button class="btn-chapter-vocab" 
+                                        onclick="openVocabModal({{ chapter.chapter_id }}, {{ chapter.chapter_number }})">
+                                    📖
+                                </button>
+                                <button class="btn-chapter-writing"
+                                        onclick="openChapterWritingModal({{ chapter.chapter_id }}, {{ chapter.chapter_number }})"
+                                        title="챕터 라이팅">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                                <button class="btn-chapter-action" 
+                                        onclick="toggleChapterComplete({{ chapter.chapter_id }})"
+                                        title="챕터 완료 토글">
+                                    <i class="bi {% if chapter.completed %}bi-check-square-fill{% else %}bi-square{% endif %}"></i>
+                                </button>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- 진행도 -->
+                <div class="progress-section">
+                    <div class="progress-label">
+                        <i class="bi bi-star-fill goal-icon"></i>
+                        <span class="goal-text">Goal</span>
+                        <span class="goal-description">{{ plan.total_chapters }}개 챕터 완료하기</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" style="width: {{ (plan.current_progress / plan.total_chapters * 100) if plan.total_chapters > 0 else 0 }}%"></div>
+                    </div>
+                    <div class="progress-text">{{ plan.current_progress }} / {{ plan.total_chapters }}</div>
+                </div>
+            </div>
+
+            <!-- 보카 섹션 -->
+            <div class="card vocabulary-section" style="display: none;">
+                <div class="section-header">
+                    <i class="bi bi-type vocab-icon"></i>
+                    <span class="section-label">이번주 보카 (Vocabulary)</span>
+                    <span class="collapse-icon">→</span>
+                </div>
+
+                <div class="vocabulary-content">
+                    <p class="vocab-description">챕터별 주요 단어를 미리 익히고 독해력을 높여보세요!</p>
+                    <div class="vocab-empty-state" style="display: block;">
+                        보카 리스트는 이 화면에서 숨김 처리되었습니다. 각 챕터의 책 아이콘을 눌러 보카를 확인하세요.
+                    </div>
+                </div>
+            </div>
+
+            <!-- 서머리 라이팅 섹션 -->
+            <div class="card summary-section" style="display: none;">
+                <div class="section-header">
+                    <i class="bi bi-pencil-fill writing-icon"></i>
+                    <span class="section-label">3줄쓰기</span>
+                    <span class="collapse-icon">→</span>
+                </div>
+
+                <div class="summary-content">
+                    <p class="summary-description">모든 챕터를 다 읽은 후, 책 내용을 정리하며 서머리 라이팅 시작하기</p>
+                    
+                    <div class="summary-writing-form">
+                        <div class="writing-line">
+                            <label>1. 핵심 내용 요약</label>
+                            <textarea rows="1" placeholder="이 책의 주요 내용을 한 문장으로 요약해주세요." class="summary-input" name="summary_main"></textarea>
+                        </div>
+                        
+                        <div class="writing-line">
+                            <label>2. 인상 깊었던 장면과 이유</label>
+                            <textarea rows="1" placeholder="가장 인상적이었던 장면과 그 이유를 작성해주세요." class="summary-input" name="summary_scene"></textarea>
+                        </div>
+                        
+                        <div class="writing-line">
+                            <label>3. 나의 생각과 느낀 점</label>
+                            <textarea rows="1" placeholder="이 책을 읽으면서 얻은 깨달음이나 느낀 점을 작성해주세요." class="summary-input" name="summary_thought"></textarea>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary btn-large" onclick="submitSummaryWriting()">
+                        <i class="bi bi-pencil-fill writing-emoji"></i>
+                        서머리 완성하기
+                    </button>
+                </div>
+            </div>
+
+        {% else %}
+            <!-- 플랜이 없을 때 -->
+            <div class="card empty-state">
+                <div class="empty-icon"><i class="bi bi-book-half"></i></div>
+                <h2>이번주 읽기 계획이 없습니다.</h2>
+                <p>관리자에게 연락하거나 새 플랜을 추가해주세요.</p>
+            </div>
+        {% endif %}
+    </main>
+
+    {% include 'partials/bottom_nav.html' %}
+
+    <!-- 보카 보기 모달 -->
+    <div id="vocabModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalChapterTitle">Chapter 1 - Vocabulary</h3>
+                <div class="vocab-modal-actions">
+                    <button class="btn btn-secondary btn-vocab-print" type="button" onclick="printVocabularyList()">
+                        <i class="bi bi-printer"></i>
+                        프린트
+                    </button>
+                    <button class="btn btn-secondary btn-vocab-add-toggle" type="button" onclick="toggleVocabAddForm()">
+                        <i class="bi bi-plus-lg"></i>
+                        보카 추가하기
+                    </button>
+                    <button class="modal-close" onclick="closeVocabModal()">×</button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div id="modalVocabList" class="vocab-list">
+                    <!-- 보카 리스트가 여기 로드됨 -->
+                </div>
+                <div id="modalVocabEmpty" class="vocab-empty" style="display: none;">
+                    이 챕터에 등록된 단어가 없습니다.
+                </div>
+
+                <div id="vocabAddFormWrap" class="vocab-add-form-wrap" style="display: none;">
+                    <form id="vocabAddForm" class="add-vocab-form" onsubmit="addVocabulary(event)">
+                        <h4>보카 추가</h4>
+                        <input type="hidden" id="selected_chapter_id" value="">
+                        <input type="hidden" id="selected_plan_id" value="{{ plan.plan_id if plan else '' }}">
+                        <div class="form-group">
+                            <input type="text" id="vocab_word" placeholder="단어" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="text" id="vocab_definition" placeholder="뜻" required>
+                        </div>
+                        <div class="form-group">
+                            <textarea id="vocab_example" placeholder="예문 (선택)" rows="2"></textarea>
+                        </div>
+                        <div class="vocab-add-actions">
+                            <button type="submit" class="btn btn-primary">추가</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeVocabAddForm()">취소</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- 모달 배경 -->
+    <div id="vocabModalOverlay" class="modal-overlay" onclick="closeVocabModal()" style="display: none;"></div>
+
+    <div id="chapterWritingModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="chapterWritingModalTitle">Chapter 라이팅</h3>
+                <button class="modal-close" onclick="closeChapterWritingModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p class="summary-description">이 챕터를 읽고, 핵심 내용을 정리해보세요.</p>
+                <div class="summary-writing-form chapter-writing-form">
+                    <div class="writing-line">
+                        <label for="chapterWritingMain">1. 핵심 내용 요약</label>
+                        <textarea id="chapterWritingMain" rows="1" class="summary-input" placeholder="이 챕터의 주요 내용을 한 문장으로 요약해주세요."></textarea>
+                    </div>
+                    <div class="writing-line">
+                        <label for="chapterWritingScene">2. 인상 깊었던 장면과 이유</label>
+                        <textarea id="chapterWritingScene" rows="1" class="summary-input" placeholder="가장 인상적이었던 장면과 그 이유를 작성해주세요."></textarea>
+                    </div>
+                    <div class="writing-line">
+                        <label for="chapterWritingThought">3. 나의 생각과 느낀 점</label>
+                        <textarea id="chapterWritingThought" rows="1" class="summary-input" placeholder="이 챕터를 읽으면서 느낀 점을 작성해주세요."></textarea>
+                    </div>
+                </div>
+                <div class="chapter-writing-actions">
+                    <button class="btn btn-primary btn-large" onclick="saveChapterWriting()">
+                        <i class="bi bi-pencil-fill writing-emoji"></i>
+                        챕터 라이팅 등록
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="chapterWritingModalOverlay" class="modal-overlay" onclick="closeChapterWritingModal()" style="display: none;"></div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}?v=20260909-06"></script>
+</body>
+</html>

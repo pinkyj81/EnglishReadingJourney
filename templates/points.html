@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ko-KR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>포인트 관리</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=20260910-01">
+</head>
+<body class="index-page points-page">
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <i class="bi bi-trophy logo-icon"></i>
+                <h1>포인트 관리</h1>
+            </div>
+            <div class="header-actions">
+                <a href="/" class="btn-header-action" title="홈으로">
+                    <i class="bi bi-house-door"></i>
+                    홈으로
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        {% if error %}
+            <div class="alert alert-error">{{ error }}</div>
+        {% endif %}
+
+        <div class="page-header">
+            <h2 class="page-title">읽기 포인트 현황</h2>
+        </div>
+
+        <div class="summary-grid">
+            <div class="summary-card">
+                <span class="summary-label">총 누적 포인트</span>
+                <div class="summary-value">{{ overall_total }}P</div>
+            </div>
+            <div class="summary-card purple">
+                <span class="summary-label">완료 계획 수</span>
+                <div class="summary-value">{{ total_plans }}</div>
+            </div>
+            <div class="summary-card green">
+                <span class="summary-label">완료 챕터 수</span>
+                <div class="summary-value">{{ history|length }}</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="section-header">
+                <i class="bi bi-list-check list-icon"></i>
+                <span class="section-label">플랜별 포인트</span>
+            </div>
+
+            {% if plan_points %}
+                <div class="plan-list">
+                    {% for item in plan_points %}
+                        <div class="plan-item">
+                            <div class="plan-header">
+                                <div class="plan-title">{{ item.book_title }}</div>
+                                <div class="point-badge">{{ item.total_points }}P</div>
+                            </div>
+                            <div class="meta-line">{{ item.author }} · 완료 {{ item.completed_chapters }}챕터</div>
+                            {% if item.last_completed_at %}
+                                <div class="meta-line">마지막 완료: {{ item.last_completed_at }}</div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-box">
+                    아직 포인트가 쌓인 기록이 없습니다.
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <div class="section-header">
+                <i class="bi bi-clock-history list-icon"></i>
+                <span class="section-label">완료 이력</span>
+            </div>
+
+            {% if history %}
+                <div class="history-list">
+                    {% for item in history %}
+                        <div class="history-item">
+                            <div class="history-info">
+                                <div class="history-header">
+                                    <div class="history-title">{{ item.book_title }} · Chapter {{ item.chapter_number }}</div>
+                                    <div class="point-badge">+{{ item.earned_points }}P</div>
+                                </div>
+                                <div class="meta-line">{{ item.completed_at }}</div>
+                                {% if item.cancelled_at %}
+                                    <div class="meta-line">취소: {{ item.cancelled_at }}{% if item.cancelled_reason %} ({{ item.cancelled_reason }}){% endif %}</div>
+                                {% endif %}
+                            </div>
+                            {% if item.cancelled_at %}
+                                <div class="history-result cancelled">취소</div>
+                            {% else %}
+                                <div class="history-result">완료</div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-box">
+                    아직 완료 이력이 없습니다.
+                </div>
+            {% endif %}
+        </div>
+    </main>
+
+    {% include 'partials/bottom_nav.html' %}
+</body>
+</html>

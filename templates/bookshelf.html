@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ko-KR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>내 책장 - English Reading Journey</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=20260909-14">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bookshelf.css') }}?v=20260909-10">
+</head>
+<body class="bookshelf-page">
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <i class="bi bi-book logo-icon"></i>
+                <h1>내 책장</h1>
+            </div>
+            <div class="header-actions">
+                <button type="button" class="btn-add-header" onclick="openAddModal()">
+                    <i class="bi bi-plus-lg"></i>
+                    책 추가
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        <!-- 책 목록 -->
+        <div class="card books-list-section">
+            <div class="section-header">
+                <i class="bi bi-book-half list-icon"></i>
+                <span class="section-label">내 책들</span>
+                <span class="badge" id="bookCount">0</span>
+                <button type="button" class="btn-add-inline" onclick="openAddModal()">
+                    <i class="bi bi-plus-lg"></i>
+                    새 책
+                </button>
+            </div>
+
+            <!-- 검색 및 필터 -->
+            <div class="search-filters">
+                <div class="search-box">
+                    <i class="bi bi-search"></i>
+                    <input type="text" id="searchInput" placeholder="책 제목, 저자로 검색..." class="search-input">
+                </div>
+
+                <div class="filter-group">
+                    <label for="typeFilter">유형</label>
+                    <select id="typeFilter" class="filter-select">
+                        <option value="">전체</option>
+                        <option value="F">Fiction (소설)</option>
+                        <option value="NF">Non-Fiction (비소설)</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="categoryFilter">관심 수제</label>
+                    <select id="categoryFilter" class="filter-select">
+                        <option value="">전체</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="seriesFilter">시리즈</label>
+                    <select id="seriesFilter" class="filter-select">
+                        <option value="">전체</option>
+                    </select>
+                </div>
+
+                <button type="button" class="btn-reset" onclick="resetFilters()">
+                    <i class="bi bi-arrow-clockwise"></i> 초기화
+                </button>
+
+                <button type="button" class="btn-search-action" onclick="filterBooks()">
+                    <i class="bi bi-search"></i> 검색
+                </button>
+
+                <button type="button" id="saveAllBtn" class="btn-save-all" onclick="saveAllRows()" disabled>
+                    <i class="bi bi-save2"></i> 전체 저장
+                </button>
+            </div>
+
+            <!-- 책 테이블 -->
+            <div id="booksContainer" class="books-table-container">
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="bi bi-inbox"></i></div>
+                    <p>등록된 책이 없습니다. 새 책 버튼으로 바로 추가해보세요.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 책 추가 모달 -->
+    <div id="addModal" class="modal">
+        <div class="modal-content modal-wide">
+            <div class="modal-header">
+                <h3>책 추가</h3>
+                <button type="button" class="btn-close" onclick="closeAddModal()">×</button>
+            </div>
+
+            <form id="bookForm" class="book-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="book_title">책 제목 *</label>
+                        <input type="text" id="book_title" name="book_title" placeholder="예: The Hate U Give" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="author">저자</label>
+                        <input type="text" id="author" name="author" placeholder="예: Angie Thomas">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="subtitle">부제목</label>
+                        <input type="text" id="subtitle" name="subtitle" placeholder="부제목">
+                    </div>
+                    <div class="form-group">
+                        <label for="series">시리즈명</label>
+                        <input type="text" id="series" name="series" placeholder="시리즈명">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="type">도서 유형</label>
+                        <select id="type" name="type">
+                            <option value="">선택</option>
+                            <option value="F">Fiction (소설)</option>
+                            <option value="NF">Non-Fiction (비소설)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="atos">AR (ATOS)</label>
+                        <input type="text" id="atos" name="atos" placeholder="예: 5.2">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="point">Point</label>
+                        <input type="number" id="point" name="point" placeholder="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="lexile">Lexile</label>
+                        <input type="text" id="lexile" name="lexile" placeholder="예: 730L">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="category">관심 수제</label>
+                        <input type="text" id="category" name="category" placeholder="관심 수제">
+                    </div>
+                    <div class="form-group">
+                        <label for="priority">우선순위</label>
+                        <input type="text" id="priority" name="priority" placeholder="우선순위">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label for="isbn">ISBN</label>
+                        <input type="text" id="isbn" name="isbn" placeholder="ISBN">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label for="book_image_url">이미지 링크</label>
+                        <input type="url" id="book_image_url" name="book_image_url" placeholder="https://example.com/book-cover.jpg">
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">저장</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeAddModal()">취소</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% include 'partials/bottom_nav.html' %}
+
+    <!-- 책 편집 모달 -->
+    <div id="editModal" class="modal">
+        <div class="modal-content modal-wide">
+            <div class="modal-header">
+                <h3>책 정보 수정</h3>
+                <button type="button" class="btn-close" onclick="closeEditModal()">×</button>
+            </div>
+
+            <form id="editBookForm" class="book-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit_book_title">책 제목 *</label>
+                        <input type="text" id="edit_book_title" name="book_title" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_author">저자</label>
+                        <input type="text" id="edit_author" name="author">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit_subtitle">부제목</label>
+                        <input type="text" id="edit_subtitle" name="subtitle">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_series">시리즈명</label>
+                        <input type="text" id="edit_series" name="series">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit_type">도서 유형</label>
+                        <select id="edit_type" name="type">
+                            <option value="">선택</option>
+                            <option value="F">Fiction (소설)</option>
+                            <option value="NF">Non-Fiction (비소설)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_atos">AR (ATOS)</label>
+                        <input type="text" id="edit_atos" name="atos">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit_point">Point</label>
+                        <input type="number" id="edit_point" name="point" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_lexile">Lexile</label>
+                        <input type="text" id="edit_lexile" name="lexile">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit_category">관심 수제</label>
+                        <input type="text" id="edit_category" name="category">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_priority">우선순위</label>
+                        <input type="text" id="edit_priority" name="priority">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label for="edit_isbn">ISBN</label>
+                        <input type="text" id="edit_isbn" name="isbn">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label for="edit_book_image_url">이미지 링크</label>
+                        <input type="url" id="edit_book_image_url" name="book_image_url" placeholder="https://example.com/book-cover.jpg">
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">저장</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeEditModal()">취소</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Alert Modal -->
+    <div id="alertModal" class="modal">
+        <div class="modal-content">
+            <p id="alertMessage"></p>
+            <button class="btn btn-primary" onclick="closeAlert()">확인</button>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/bookshelf.js') }}?v=20260909-06"></script>
+</body>
+</html>
