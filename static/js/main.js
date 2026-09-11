@@ -5,6 +5,15 @@ let currentVocabChapterId = null;
 let currentVocabPlanId = null;
 let currentVocabChapterNumber = null;
 
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 function splitLegacyChapterWritingText(text) {
     const raw = (text || '').trim();
     if (!raw) {
@@ -82,16 +91,31 @@ async function openVocabModal(chapterId, chapterNumber) {
         } else {
             vocabList.style.display = 'block';
             vocabEmpty.style.display = 'none';
-            
-            vocabList.innerHTML = vocabs.map((vocab, idx) => `
-                <div class="vocab-item">
-                    <div class="modal-vocab-line">
-                        <div class="vocab-word"><span class="vocab-index">${idx + 1}.</span> ${vocab.word}</div>
-                        <div class="modal-vocab-definition">${vocab.definition}</div>
+
+            vocabList.innerHTML = vocabs.map((vocab, idx) => {
+                const word = escapeHtml(vocab.word || '');
+                const definition = escapeHtml(vocab.definition || '');
+                const example = escapeHtml(vocab.example || '');
+                return `
+                    <div class="vocab-item">
+                        <div class="modal-vocab-line">
+                            <button type="button" class="vocab-word-button" data-word="${word}" aria-label="${word} 발음 듣기">
+                                <span class="vocab-index">${idx + 1}.</span>
+                                <span class="vocab-word-text">${word}</span>
+                                <i class="bi bi-volume-up speaker-icon" aria-hidden="true"></i>
+                            </button>
+                            <div class="modal-vocab-definition">${definition}</div>
+                        </div>
+                        ${example ? `<div class="vocab-example">${example}</div>` : ''}
                     </div>
-                    ${vocab.example ? `<div class="vocab-example">${vocab.example}</div>` : ''}
-                </div>
-            `).join('');
+                `;
+            }).join('');
+
+            vocabList.querySelectorAll('.vocab-word-button').forEach((button) => {
+                button.addEventListener('click', () => {
+                    speakWord(button.dataset.word);
+                });
+            });
         }
 
         // 모달 표시
@@ -413,10 +437,17 @@ function submitSummaryWriting() {
 
 // 스피커 아이콘 클릭 - 단어 발음
 function speakWord(word) {
+    if (!word) {
+        return;
+    }
+
     if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(word);
         utterance.lang = 'en-US';
-        speechSynthesis.speak(utterance);
+        utterance.rate = 0.9;
+        utterance.pitch = 1;
+        window.speechSynthesis.speak(utterance);
     } else {
         alert('이 브라우저에서는 음성 재생을 지원하지 않습니다.');
     }
